@@ -27,8 +27,6 @@
 
 #include "binding-hash.h"
 #include "common.h"
-#include "type-vector.h"
-#include "vector.h"
 
 namespace wabt {
 
@@ -45,10 +43,9 @@ struct Var {
     StringSlice name;
   };
 };
-WABT_DEFINE_VECTOR(var, Var);
+typedef std::vector<Var> VarVector;
 
 typedef StringSlice Label;
-WABT_DEFINE_VECTOR(string_slice, StringSlice);
 
 struct Const {
   Location loc;
@@ -60,7 +57,7 @@ struct Const {
     uint64_t f64_bits;
   };
 };
-WABT_DEFINE_VECTOR(const, Const);
+typedef std::vector<Const> ConstVector;
 
 enum class ExprType {
   Binary,
@@ -95,25 +92,33 @@ enum class ExprType {
 typedef TypeVector BlockSignature;
 
 struct Block {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Block);
+  Block();
+  ~Block();
+
   Label label;
   BlockSignature sig;
   struct Expr* first;
 };
 
 struct Expr {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Expr);
+  Expr();
+  ~Expr();
+
   Location loc;
   ExprType type;
   Expr* next;
   union {
     struct { Opcode opcode; } binary, compare, convert, unary;
-    Block block, loop;
+    Block *block, *loop;
     struct { Var var; } br, br_if;
-    struct { VarVector targets; Var default_target; } br_table;
+    struct { VarVector* targets; Var default_target; } br_table;
     struct { Var var; } call, call_indirect;
     Const const_;
     struct { Var var; } get_global, set_global;
     struct { Var var; } get_local, set_local, tee_local;
-    struct { Block true_; struct Expr* false_; } if_;
+    struct { Block* true_; struct Expr* false_; } if_;
     struct { Opcode opcode; uint32_t align; uint64_t offset; } load, store;
   };
 };
@@ -124,11 +129,13 @@ struct FuncSignature {
 };
 
 struct FuncType {
+  WABT_DISALLOW_COPY_AND_ASSIGN(FuncType);
+  FuncType();
+  ~FuncType();
+
   StringSlice name;
   FuncSignature sig;
 };
-typedef FuncType* FuncTypePtr;
-WABT_DEFINE_VECTOR(func_type_ptr, FuncTypePtr);
 
 enum {
   WABT_FUNC_DECLARATION_FLAG_HAS_FUNC_TYPE = 1,
@@ -138,6 +145,10 @@ enum {
 typedef uint32_t FuncDeclarationFlags;
 
 struct FuncDeclaration {
+  WABT_DISALLOW_COPY_AND_ASSIGN(FuncDeclaration);
+  FuncDeclaration();
+  ~FuncDeclaration();
+
   FuncDeclarationFlags flags;
   Var type_var;
   FuncSignature sig;
@@ -146,6 +157,8 @@ struct FuncDeclaration {
 struct Func {
   WABT_DISALLOW_COPY_AND_ASSIGN(Func);
   Func();
+  Func(Func&&);
+  Func& operator=(Func&&);
   ~Func();
 
   StringSlice name;
@@ -155,50 +168,68 @@ struct Func {
   BindingHash local_bindings;
   Expr* first_expr;
 };
-typedef Func* FuncPtr;
-WABT_DEFINE_VECTOR(func_ptr, FuncPtr);
 
 struct Global {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Global);
+  Global();
+  Global(Global&&);
+  Global& operator=(Global&&);
+  ~Global();
+
   StringSlice name;
   Type type;
   bool mutable_;
   Expr* init_expr;
 };
-typedef Global* GlobalPtr;
-WABT_DEFINE_VECTOR(global_ptr, GlobalPtr);
 
 struct Table {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Table);
+  Table();
+  Table(Table&&);
+  Table& operator=(Table&&);
+  ~Table();
+
   StringSlice name;
   Limits elem_limits;
 };
-typedef Table* TablePtr;
-WABT_DEFINE_VECTOR(table_ptr, TablePtr);
 
 struct ElemSegment {
+  WABT_DISALLOW_COPY_AND_ASSIGN(ElemSegment);
+  ElemSegment();
+  ~ElemSegment();
+
   Var table_var;
   Expr* offset;
   VarVector vars;
 };
-typedef ElemSegment* ElemSegmentPtr;
-WABT_DEFINE_VECTOR(elem_segment_ptr, ElemSegmentPtr);
 
 struct Memory {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Memory);
+  Memory();
+  Memory(Memory&&);
+  Memory& operator=(Memory&&);
+  ~Memory();
+
   StringSlice name;
   Limits page_limits;
 };
-typedef Memory* MemoryPtr;
-WABT_DEFINE_VECTOR(memory_ptr, MemoryPtr);
 
 struct DataSegment {
+  WABT_DISALLOW_COPY_AND_ASSIGN(DataSegment);
+  DataSegment();
+  ~DataSegment();
+
   Var memory_var;
   Expr* offset;
   char* data;
   size_t size;
 };
-typedef DataSegment* DataSegmentPtr;
-WABT_DEFINE_VECTOR(data_segment_ptr, DataSegmentPtr);
 
 struct Import {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Import);
+  Import();
+  ~Import();
+
   StringSlice module_name;
   StringSlice field_name;
   ExternalKind kind;
@@ -207,21 +238,23 @@ struct Import {
      * included in the Module's vector of funcs; but only the
      * FuncDeclaration will have any useful information */
     Func* func;
-    Table table;
-    Memory memory;
-    Global global;
+    Table* table;
+    Memory* memory;
+    Global* global;
   };
 };
-typedef Import* ImportPtr;
-WABT_DEFINE_VECTOR(import_ptr, ImportPtr);
 
 struct Export {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Export);
+  Export();
+  Export(Export&&);
+  Export& operator=(Export&&);
+  ~Export();
+
   StringSlice name;
   ExternalKind kind;
   Var var;
 };
-typedef Export* ExportPtr;
-WABT_DEFINE_VECTOR(export_ptr, ExportPtr);
 
 enum class ModuleFieldType {
   Func,
@@ -237,19 +270,23 @@ enum class ModuleFieldType {
 };
 
 struct ModuleField {
+  WABT_DISALLOW_COPY_AND_ASSIGN(ModuleField);
+  ModuleField();
+  ~ModuleField();
+
   Location loc;
   ModuleFieldType type;
   struct ModuleField* next;
   union {
     Func* func;
-    Global global;
+    Global* global;
     Import* import;
-    Export export_;
-    FuncType func_type;
-    Table table;
-    ElemSegment elem_segment;
-    Memory memory;
-    DataSegment data_segment;
+    Export* export_;
+    FuncType* func_type;
+    Table* table;
+    ElemSegment* elem_segment;
+    Memory* memory;
+    DataSegment* data_segment;
     Var start;
   };
 };
@@ -271,15 +308,15 @@ struct Module {
 
   /* cached for convenience; the pointers are shared with values that are
    * stored in either ModuleField or Import. */
-  FuncPtrVector funcs;
-  GlobalPtrVector globals;
-  ImportPtrVector imports;
-  ExportPtrVector exports;
-  FuncTypePtrVector func_types;
-  TablePtrVector tables;
-  ElemSegmentPtrVector elem_segments;
-  MemoryPtrVector memories;
-  DataSegmentPtrVector data_segments;
+  std::vector<Func*> funcs;
+  std::vector<Global*> globals;
+  std::vector<Import*> imports;
+  std::vector<Export*> exports;
+  std::vector<FuncType*> func_types;
+  std::vector<Table*> tables;
+  std::vector<ElemSegment*> elem_segments;
+  std::vector<Memory*> memories;
+  std::vector<DataSegment*> data_segments;
   Var* start;
 
   BindingHash func_bindings;
@@ -301,6 +338,12 @@ enum class RawModuleType {
  * when parsing text, as assert_invalid always assumes that text parsing
  * succeeds. */
 struct RawModule {
+  WABT_DISALLOW_COPY_AND_ASSIGN(RawModule);
+  RawModule();
+  RawModule(RawModule&&);
+  RawModule& operator=(RawModule&&);
+  ~RawModule();
+
   RawModuleType type;
   union {
     Module* text;
@@ -319,21 +362,23 @@ enum class ActionType {
 };
 
 struct ActionInvoke {
-  StringSlice name;
+  WABT_DISALLOW_COPY_AND_ASSIGN(ActionInvoke);
+
   ConstVector args;
 };
 
-struct ActionGet {
-  StringSlice name;
-};
-
 struct Action {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Action);
+  Action();
+  ~Action();
+
   Location loc;
   ActionType type;
   Var module_var;
+  StringSlice name;
   union {
-    ActionInvoke invoke;
-    ActionGet get;
+    ActionInvoke* invoke;
+    struct {} get;
   };
 };
 
@@ -359,14 +404,20 @@ enum class CommandType {
 static const int kCommandTypeCount = WABT_ENUM_COUNT(CommandType);
 
 struct Command {
+  WABT_DISALLOW_COPY_AND_ASSIGN(Command);
+  Command();
+  Command(Command&&);
+  Command& operator=(Command&&);
+  ~Command();
+
   CommandType type;
   union {
     Module* module;
-    Action action;
+    Action* action;
     struct { StringSlice module_name; Var var; } register_;
-    struct { Action action; ConstVector expected; } assert_return;
-    struct { Action action; } assert_return_nan;
-    struct { Action action; StringSlice text; } assert_trap;
+    struct { Action* action; ConstVector* expected; } assert_return;
+    struct { Action* action; } assert_return_nan;
+    struct { Action* action; StringSlice text; } assert_trap;
     struct {
       RawModule module;
       StringSlice text;
@@ -374,12 +425,11 @@ struct Command {
         assert_uninstantiable;
   };
 };
-WABT_DEFINE_VECTOR(command, Command);
+typedef std::vector<Command> CommandVector;
 
 struct Script {
   WABT_DISALLOW_COPY_AND_ASSIGN(Script);
   Script();
-  ~Script();
 
   CommandVector commands;
   BindingHash module_bindings;
@@ -455,23 +505,7 @@ Expr* new_unreachable_expr(void);
 
 /* destruction functions. not needed unless you're creating your own AST
  elements */
-void destroy_action(struct Action*);
-void destroy_block(struct Block*);
-void destroy_command_vector_and_elements(CommandVector*);
-void destroy_command(Command*);
-void destroy_data_segment(DataSegment*);
-void destroy_elem_segment(ElemSegment*);
-void destroy_export(Export*);
-void destroy_expr(Expr*);
 void destroy_expr_list(Expr*);
-void destroy_func_declaration(FuncDeclaration*);
-void destroy_func_signature(FuncSignature*);
-void destroy_func_type(FuncType*);
-void destroy_import(Import*);
-void destroy_memory(Memory*);
-void destroy_raw_module(RawModule*);
-void destroy_table(Table*);
-void destroy_var_vector_and_elements(VarVector*);
 void destroy_var(Var*);
 
 /* traversal functions */
@@ -492,13 +526,13 @@ int get_import_index_by_var(const Module* module, const Var* var);
 int get_local_index_by_var(const Func* func, const Var* var);
 int get_module_index_by_var(const Script* script, const Var* var);
 
-FuncPtr get_func_by_var(const Module* module, const Var* var);
-GlobalPtr get_global_by_var(const Module* func, const Var* var);
-FuncTypePtr get_func_type_by_var(const Module* module, const Var* var);
-TablePtr get_table_by_var(const Module* module, const Var* var);
-MemoryPtr get_memory_by_var(const Module* module, const Var* var);
-ImportPtr get_import_by_var(const Module* module, const Var* var);
-ExportPtr get_export_by_name(const Module* module, const StringSlice* name);
+Func* get_func_by_var(const Module* module, const Var* var);
+Global* get_global_by_var(const Module* func, const Var* var);
+FuncType* get_func_type_by_var(const Module* module, const Var* var);
+Table* get_table_by_var(const Module* module, const Var* var);
+Memory* get_memory_by_var(const Module* module, const Var* var);
+Import* get_import_by_var(const Module* module, const Var* var);
+Export* get_export_by_name(const Module* module, const StringSlice* name);
 Module* get_first_module(const Script* script);
 Module* get_module_by_var(const Script* script, const Var* var);
 
@@ -514,21 +548,20 @@ static WABT_INLINE bool decl_has_func_type(const FuncDeclaration* decl) {
 
 static WABT_INLINE bool signatures_are_equal(const FuncSignature* sig1,
                                              const FuncSignature* sig2) {
-  return static_cast<bool>(
-      type_vectors_are_equal(&sig1->param_types, &sig2->param_types) &&
-      type_vectors_are_equal(&sig1->result_types, &sig2->result_types));
+  return sig1->param_types == sig2->param_types &&
+         sig1->result_types == sig2->result_types;
 }
 
 static WABT_INLINE size_t get_num_params(const Func* func) {
-  return func->decl.sig.param_types.size;
+  return func->decl.sig.param_types.size();
 }
 
 static WABT_INLINE size_t get_num_results(const Func* func) {
-  return func->decl.sig.result_types.size;
+  return func->decl.sig.result_types.size();
 }
 
 static WABT_INLINE size_t get_num_locals(const Func* func) {
-  return func->local_types.size;
+  return func->local_types.size();
 }
 
 static WABT_INLINE size_t get_num_params_and_locals(const Func* func) {
@@ -536,36 +569,36 @@ static WABT_INLINE size_t get_num_params_and_locals(const Func* func) {
 }
 
 static WABT_INLINE Type get_param_type(const Func* func, int index) {
-  assert(static_cast<size_t>(index) < func->decl.sig.param_types.size);
-  return func->decl.sig.param_types.data[index];
+  assert(static_cast<size_t>(index) < func->decl.sig.param_types.size());
+  return func->decl.sig.param_types[index];
 }
 
 static WABT_INLINE Type get_local_type(const Func* func, int index) {
   assert(static_cast<size_t>(index) < get_num_locals(func));
-  return func->local_types.data[index];
+  return func->local_types[index];
 }
 
 static WABT_INLINE Type get_result_type(const Func* func, int index) {
-  assert(static_cast<size_t>(index) < func->decl.sig.result_types.size);
-  return func->decl.sig.result_types.data[index];
+  assert(static_cast<size_t>(index) < func->decl.sig.result_types.size());
+  return func->decl.sig.result_types[index];
 }
 
 static WABT_INLINE Type get_func_type_param_type(const FuncType* func_type,
                                                  int index) {
-  return func_type->sig.param_types.data[index];
+  return func_type->sig.param_types[index];
 }
 
 static WABT_INLINE size_t get_func_type_num_params(const FuncType* func_type) {
-  return func_type->sig.param_types.size;
+  return func_type->sig.param_types.size();
 }
 
 static WABT_INLINE Type get_func_type_result_type(const FuncType* func_type,
                                                   int index) {
-  return func_type->sig.result_types.data[index];
+  return func_type->sig.result_types[index];
 }
 
 static WABT_INLINE size_t get_func_type_num_results(const FuncType* func_type) {
-  return func_type->sig.result_types.size;
+  return func_type->sig.result_types.size();
 }
 
 static WABT_INLINE const Location* get_raw_module_location(

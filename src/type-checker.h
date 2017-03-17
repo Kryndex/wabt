@@ -18,8 +18,6 @@
 #define WABT_TYPE_CHECKER_H_
 
 #include "common.h"
-#include "type-vector.h"
-#include "vector.h"
 
 namespace wabt {
 
@@ -36,12 +34,11 @@ struct TypeCheckerLabel {
   size_t type_stack_limit;
   bool unreachable;
 };
-WABT_DEFINE_VECTOR(type_checker_label, TypeCheckerLabel);
 
 struct TypeChecker {
   TypeCheckerErrorHandler* error_handler;
   TypeVector type_stack;
-  TypeCheckerLabelVector label_stack;
+  std::vector<TypeCheckerLabel> label_stack;
   /* TODO(binji): will need to be complete signature when signatures with
    * multiple types are allowed. */
   Type br_table_sig;

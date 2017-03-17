@@ -27,6 +27,7 @@
 
 #include <string>
 #include <type_traits>
+#include <vector>
 
 #include "config.h"
 
@@ -167,6 +168,7 @@ enum class Type {
   ___ = Void, /* convenient for the opcode table below */
   Any = 0,    /* Not actually specified, but useful for type-checking */
 };
+typedef std::vector<Type> TypeVector;
 
 enum class RelocType {
   FuncIndexLEB = 0,   /* e.g. immediate of call instruction */

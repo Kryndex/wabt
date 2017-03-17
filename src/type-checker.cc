@@ -41,14 +41,14 @@ static void WABT_PRINTF_FORMAT(2, 3)
 Result typechecker_get_label(TypeChecker* tc,
                              size_t depth,
                              TypeCheckerLabel** out_label) {
-  if (depth >= tc->label_stack.size) {
-    assert(tc->label_stack.size > 0);
+  if (depth >= tc->label_stack.size()) {
+    assert(tc->label_stack.size() > 0);
     print_error(tc, "invalid depth: %" PRIzd " (max %" PRIzd ")", depth,
-                tc->label_stack.size - 1);
+                tc->label_stack.size() - 1);
     *out_label = nullptr;
     return Result::Error;
   }
-  *out_label = &tc->label_stack.data[tc->label_stack.size - depth - 1];
+  *out_label = &tc->label_stack[tc->label_stack.size() - depth - 1];
   return Result::Ok;
 }
 
@@ -65,7 +65,7 @@ bool typechecker_is_unreachable(TypeChecker* tc) {
 
 static void reset_type_stack_to_label(TypeChecker* tc,
                                       TypeCheckerLabel* label) {
-  tc->type_stack.size = label->type_stack_limit;
+  tc->type_stack.resize(label->type_stack_limit);
 }
 
 static Result set_unreachable(TypeChecker* tc) {
